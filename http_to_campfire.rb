@@ -5,13 +5,6 @@ require 'active_support'
 require 'tinder'
 
 
-campfire_auth = { :subdomain => '',
-                  :email     => '',
-                  :password  => '',
-                  :room      => '' }
-campfire = Tinder::Campfire.new(campfire_auth[:subdomain], :ssl => true)
-
-
 post '/github_commits' do
   push = JSON.parse(params[:payload])
 
@@ -21,14 +14,26 @@ post '/github_commits' do
   repo    = push['repository']['url'].match(%r{github\.com/(\w+/\w+)})[1]
   commits = push['commits'].reverse
 
-  if campfire.login(campfire_auth[:email], campfire_auth[:password])
-    if room = campfire.find_room_by_name(campfire_auth[:room])
-      room.speak "#{authors} pushed to #{branch} at #{repo}:"
-      commits.each do |commit|
-        room.speak commit['url']
-        room.paste "[#{commit['id'][0...10]}] #{commit['message']}"
-      end
+  with_campfire do |room|
+    room.speak "#{authors} pushed to #{branch} at #{repo}:"
+    commits.each do |commit|
+      room.speak commit['url']
+      room.paste "[#{commit['id'][0...10]}] #{commit['message']}"
     end
   end
+
   "Done and done!"
+end
+
+
+
+def with_campfire
+  campfire_auth = {:subdomain => '', :email => '',
+                   :password  => '', :room => ''}
+  campfire = Tinder::Campfire.new(campfire_auth[:subdomain], :ssl => true)
+  if campfire.login(campfire_auth[:email], campfire_auth[:password])
+    if room = campfire.find_room_by_name(campfire_auth[:room])
+      yield room
+    end
+  end
 end
