@@ -28,11 +28,12 @@ end
 
 
 def with_campfire
-  campfire_auth = {:subdomain => '', :email => '',
-                   :password  => '', :room => ''}
-  campfire = Tinder::Campfire.new(campfire_auth[:subdomain], :ssl => true)
-  if campfire.login(campfire_auth[:email], campfire_auth[:password])
-    if room = campfire.find_room_by_name(campfire_auth[:room])
+  config_file = File.join(File.dirname(__FILE__), 'config', 'campfire.yml')
+  config = YAML.load_file(config_file).symbolize_keys!
+
+  campfire = Tinder::Campfire.new(config[:subdomain], :ssl => config[:ssl])
+  if campfire.login(config[:email], config[:password])
+    if room = campfire.find_room_by_name(config[:room])
       yield room
     end
   end
